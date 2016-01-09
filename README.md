@@ -60,7 +60,7 @@ dbnz tmp, l
 
 
 ### halt(status)
-Causing the interpreter to exit with the specified status code, by jumping to a specially interpreted unaligned address.
+Causes the interpreter to exit with the specified status code, by jumping to a specially interpreted unaligned address.
 
 When jumping to an odd (unaligned) address, the interpreter exits with the floored value of half of the address.
 
