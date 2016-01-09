@@ -15,68 +15,68 @@ dec(@1)
 dec(ptr)
 dbnz @1, zerotmp
 
-def jmp(label, tmp)
+def jmp(label)
 ; Unconditionally jumps to the address pointed to by `label`.
-dbnz tmp, label
-dbnz tmp, label
+dbnz @1, label
+dbnz @1, label
 
-def dynjmp(label, tmp)
+def dynjmp(label)
 ; A value cannot be zero for two decrements in a row. If the label is required to be dynamic, the second call can simply jump back to the first whenever it falls through:
-dbnz tmp, label
-dbnz tmp, this - 3
+dbnz @1, label
+dbnz @1, this - 3
 
 
-def halt()
+def halt(status)
 ; Causes the interpreter to exit with the specified status code, by jumping to a specially interpreted unaligned address.
 add(status, status)
 inc(status)
 jmp(status)
 
-def add(ptr, tgt, tmp)
+def add(ptr, tgt)
 ; Adds the value at `ptr` to `tgt`.
-zero(tmp)
-:zeroptr          ; zero out ptr, adding MAX - ptr to tmp
-dec(tmp)
+zero(@1)
+:zeroptr          ; zero out ptr, adding MAX - ptr to @1
+dec(@1)
 dbnz ptr, zeroptr
                   ;
-:zerotmp          ; zero out tmp, adding MAX - tmp (ie. the original value of ptr) to ptr and tgt
+:zerotmp          ; zero out @1, adding MAX - @1 (ie. the original value of ptr) to ptr and tgt
 dec(ptr)
 dec(tgt)
-dbnz tmp, zerotmp
+dbnz @1, zerotmp
 
-def dup(ptr, tgt, tmp)
+def dup(ptr, tgt)
 ; Duplicates the value at ptr to tgt
 zero(tgt)
-add(ptr, tgt, tmp)
+add(ptr, tgt)
 
-def sub(ptr, tgt, tmp)
+def sub(ptr, tgt)
 ; Subtracts the value at ptr from tgt
-zero(tmp)
-:zeroptr          ; zero out ptr, adding MAX - ptr to tmp
+zero(@1)
+:zeroptr          ; zero out ptr, adding MAX - ptr to @1
 dec(tgt)
-dec(tmp)
+dec(@1)
 dbnz ptr, zeroptr
                   ;
 :zerotmp          ; Start decrementing the wrapped value at ptr until its original value is restored
 dec(ptr)
-dbnz tmp, zerotmp
+dbnz @1, zerotmp
 
-add( &72, data     , @1)      ; H
-add(&101, data +  1, @1)      ; e
-add(&108, data +  2, @1)      ; l
-add(&108, data +  3, @1)      ; l
-add(&111, data +  4, @1)      ; o
-add( &44, data +  5, @1)      ; ,
-add( &32, data +  6, @1)      ;
-add(&119, data +  7, @1)      ; w
-add(&111, data +  8, @1)      ; o
-add(&114, data +  9, @1)      ; r
-add(&108, data + 10, @1)      ; l
-add(&100, data + 11, @1)      ; d
-add( &33, data + 12, @1)      ; !
+add( &72, data     )      ; H
+add(&101, data +  1)      ; e
+add(&108, data +  2)      ; l
+add(&108, data +  3)      ; l
+add(&111, data +  4)      ; o
+add( &44, data +  5)      ; ,
+add( &32, data +  6)      ;
+add(&119, data +  7)      ; w
+add(&111, data +  8)      ; o
+add(&114, data +  9)      ; r
+add(&108, data + 10)      ; l
+add(&100, data + 11)      ; d
+add( &33, data + 12)      ; !
                               ; ^ Hello, world!
-add(&100, data + 13, @1)
-sub( &58, data + 13, @1)      ; 42
+add(&100, data + 13)
+sub( &58, data + 13)      ; 42
                               ; The answer to life, the universe, and everything
-dup(data + 13, data + 14, @1) ; Everyone deserves a second chance
+dup(data + 13, data + 14) ; Everyone deserves a second chance
 halt(0)
