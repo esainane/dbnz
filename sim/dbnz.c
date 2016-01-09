@@ -13,11 +13,13 @@ static void dbnz_bounds_hcf(const char *what, unsigned int step, size_t cursor, 
   exit(1);
 }
 
-void dbnz_bootstrap(DBNZ_CELL_TYPE *state, size_t plen, void (*stepcallback)(const DBNZ_CELL_TYPE *state, size_t cursor, unsigned int step)) {
+int dbnz_bootstrap(DBNZ_CELL_TYPE *state, size_t plen, void (*stepcallback)(const DBNZ_CELL_TYPE *state, size_t cursor, unsigned int step)) {
   size_t cursor = 0; /* Start at the first instruction */
-  int running = 1;
   unsigned int step = 0;
-  do {
+  for (;;) {
+    if (cursor & 1) {
+      return cursor >> 1;
+    }
     if (cursor >= plen) {
       dbnz_bounds_hcf("Execution cursor", step, cursor, plen);
     }
@@ -33,5 +35,5 @@ void dbnz_bootstrap(DBNZ_CELL_TYPE *state, size_t plen, void (*stepcallback)(con
       stepcallback(state, cursor, step);
     }
     ++step;
-  } while (running);
+  }
 }
