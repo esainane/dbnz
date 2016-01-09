@@ -38,8 +38,7 @@ zero(tmp)
 dec(tmp)
 :zerotmp          ; tmp is already decremented once; we decrement ptr MAX-1 times.
 dec(ptr)
-dbnz tmp, done
-:done
+dbnz tmp, zerotmp
 ```
 
 ### jmp(label, tmp)

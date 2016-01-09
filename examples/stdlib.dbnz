@@ -7,6 +7,14 @@ def dec(ptr)
 ; Simple decrement and move to next instruction.
 dbnz ptr, this + 1
 
+def inc(ptr)
+; Increments ptr by one, and moves to the next instruction.
+zero(@1)
+dec(@1)
+:zerotmp          ; @1 is already decremented once; we decrement ptr MAX-1 times.
+dec(ptr)
+dbnz @1, zerotmp
+
 def jmp(label, tmp)
 ; Unconditionally jumps to the address pointed to by `label`.
 dbnz tmp, label
