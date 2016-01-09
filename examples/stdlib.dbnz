@@ -1,0 +1,74 @@
+
+def zero(ptr)
+; Zeroes out the  value pointed to by `ptr`.
+dbnz ptr, this - 1
+
+def dec(ptr)
+; Simple decrement and move to next instruction.
+dbnz ptr, this + 1
+
+def jmp(label, tmp)
+; Unconditionally jumps to the address pointed to by `label`.
+dbnz tmp, label
+dbnz tmp, label
+
+def dynjmp(label, tmp)
+; A value cannot be zero for two decrements in a row. If the label is required to be dynamic, the second call can simply jump back to the first whenever it falls through:
+dbnz tmp, label
+dbnz tmp, this - 3
+
+
+def halt()
+; Causes the interpreter to exit with the specified status code, by jumping to a specially interpreted unaligned address.
+add(status, status)
+inc(status)
+jmp(status)
+
+def add(ptr, tgt, tmp)
+; Adds the value at `ptr` to `tgt`.
+zero(tmp)
+:zeroptr          ; zero out ptr, adding MAX - ptr to tmp
+dec(tmp)
+dbnz ptr, zeroptr
+                  ;
+:zerotmp          ; zero out tmp, adding MAX - tmp (ie. the original value of ptr) to ptr and tgt
+dec(ptr)
+dec(tgt)
+dbnz tmp, zerotmp
+
+def dup(ptr, tgt, tmp)
+; Duplicates the value at ptr to tgt
+zero(tgt)
+add(ptr, tgt, tmp)
+
+def sub(ptr, tgt, tmp)
+; Subtracts the value at ptr from tgt
+zero(tmp)
+:zeroptr          ; zero out ptr, adding MAX - ptr to tmp
+dec(tgt)
+dec(tmp)
+dbnz ptr, zeroptr
+                  ;
+:zerotmp          ; Start decrementing the wrapped value at ptr until its original value is restored
+dec(ptr)
+dbnz tmp, zerotmp
+
+add( &72, data     , @1)      ; H
+add(&101, data +  1, @1)      ; e
+add(&108, data +  2, @1)      ; l
+add(&108, data +  3, @1)      ; l
+add(&111, data +  4, @1)      ; o
+add( &44, data +  5, @1)      ; ,
+add( &32, data +  6, @1)      ;
+add(&119, data +  7, @1)      ; w
+add(&111, data +  8, @1)      ; o
+add(&114, data +  9, @1)      ; r
+add(&108, data + 10, @1)      ; l
+add(&100, data + 11, @1)      ; d
+add( &33, data + 12, @1)      ; !
+                              ; ^ Hello, world!
+add(&100, data + 13, @1)
+sub( &58, data + 13, @1)      ; 42
+                              ; The answer to life, the universe, and everything
+dup(data + 13, data + 14, @1) ; Everyone deserves a second chance
+halt(0)
