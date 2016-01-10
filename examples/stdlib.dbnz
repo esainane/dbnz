@@ -74,9 +74,9 @@ add(&114, data +  9)      ; r
 add(&108, data + 10)      ; l
 add(&100, data + 11)      ; d
 add( &33, data + 12)      ; !
-                              ; ^ Hello, world!
+                          ; ^ Hello, world!
 add(&100, data + 13)
 sub( &58, data + 13)      ; 42
-                              ; The answer to life, the universe, and everything
+                          ; The answer to life, the universe, and everything
 dup(data + 13, data + 14) ; Everyone deserves a second chance
 halt(&0)
