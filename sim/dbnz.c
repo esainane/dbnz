@@ -16,6 +16,10 @@ static void dbnz_bounds_hcf(const char *what, unsigned int step, size_t cursor, 
 
 int dbnz_file_bootstrap(const char *filename, void (*stepcallback)(const DBNZ_CELL_TYPE *state, size_t cursor, unsigned int step)) {
   FILE * f = fopen(filename, "r");
+  if (!f) {
+    fprintf(stderr, "Unable to open file '%s', aborting!\n", filename);
+    exit(1);
+  }
   size_t plen;
   fscanf(f, " %z ", &plen);
   DBNZ_CELL_TYPE *state = malloc(sizeof(DBNZ_CELL_TYPE) * plen);
