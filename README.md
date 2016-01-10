@@ -8,6 +8,10 @@ An emulator for a processor with only one instruction:
 
 At each step, the machine decrements the the value addressed by the value at its cursor. If the value is zero, the cursor moved to the next line (moving forward two cells). If the value is not zero, the cursor is moved to the address described by the value one step ahead of its cursor.
 
+Before anything else
+---
+Even small programs can explode in size quite quickly. You probably want to check out the [helper language](https://github.com/esainane/dbnz/tree/master/asm).
+
 Gadgets
 ---
 
