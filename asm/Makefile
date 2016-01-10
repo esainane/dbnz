@@ -13,11 +13,13 @@ FLEX=flex
 CC=gcc
 CFLAGS=-g -O2 -fno-strict-aliasing -fstack-protector-all
 
+ifeq ($(VERBOSE), 1)
 # Parsing debugging options:
 # If we should also generate a file explaining the state explanations
 EXPLAIN=-v
 # If we should provide a detailed trace whenever we parse a file
 RUNTIME_TRACE=-DENABLE_TRACE
+endif
 
 all: $(TARGET)
 
