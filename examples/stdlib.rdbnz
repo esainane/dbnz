@@ -1,29 +1,27 @@
 
 def zero(ptr)
-; Zeroes out the  value pointed to by `ptr`.
-dbnz ptr, this - 1
+dbnz ptr, this - 1 ; Zeroes out the  value pointed to by `ptr`.
 
 def dec(ptr)
-; Simple decrement and move to next instruction.
-dbnz ptr, this + 1
+dbnz ptr, this + 1 ; Simple decrement and move to next instruction.
 
 def inc(ptr)
 ; Increments ptr by one, and moves to the next instruction.
 zero(@1)
 dec(@1)
-:zerotmp          ; @1 is already decremented once; we decrement ptr MAX-1 times.
+:zerotmp           ; @1 is already decremented once; we decrement ptr MAX-1 times.
 dec(ptr)
-dbnz @1, zerotmp
+dbnz @1, zerotmp   ; Zero out our temporary instruction until we've wrapped and incremented our original instruction.
 
 def jmp(label)
 ; Unconditionally jumps to the address pointed to by `label`.
-dbnz @1, label
-dbnz @1, label
+dbnz @1, label     ; Try to jump to the label, using our temporary value.
+dbnz @1, label     ; If we've fallen through, we know we'll jump to our label now, as we can't decrement to zero twice in a row.
 
 def dynjmp(label)
 ; A value cannot be zero for two decrements in a row. If the label is required to be dynamic, the second call can simply jump back to the first whenever it falls through:
-dbnz @1, label
-dbnz @1, this - 3
+dbnz @1, label     ; Try to jump to the label, using our temporary value.
+dbnz @1, this - 3  ; If we've fallen through, we know we'll jump to our label now, as we can't decrement to zero twice in a row.
 
 
 def halt(status)
@@ -35,14 +33,14 @@ jmp(status)
 def add(ptr, tgt)
 ; Adds the value at `ptr` to `tgt`.
 zero(@1)
-:zeroptr          ; zero out ptr, adding MAX - ptr to @1
+:zeroptr
 dec(@1)
-dbnz ptr, zeroptr
-                  ;
-:zerotmp          ; zero out @1, adding MAX - @1 (ie. the original value of ptr) to ptr and tgt
+dbnz ptr, zeroptr  ; zero out ptr, adding MAX - ptr to @1
+                   ;
+:zerotmp
 dec(ptr)
 dec(tgt)
-dbnz @1, zerotmp
+dbnz @1, zerotmp   ; zero out @1, adding MAX - @1 (ie. the original value of ptr) back to ptr and adding to tgt
 
 def dup(ptr, tgt)
 ; Duplicates the value at ptr to tgt
@@ -52,14 +50,14 @@ add(ptr, tgt)
 def sub(ptr, tgt)
 ; Subtracts the value at ptr from tgt
 zero(@1)
-:zeroptr          ; zero out ptr, adding MAX - ptr to @1
+:zeroptr
 dec(tgt)
 dec(@1)
-dbnz ptr, zeroptr
-                  ;
-:zerotmp          ; Start decrementing the wrapped value at ptr until its original value is restored
+dbnz ptr, zeroptr  ; zero out ptr, adding MAX - ptr to @1
+                   ;
+:zerotmp
 dec(ptr)
-dbnz @1, zerotmp
+dbnz @1, zerotmp   ; Start decrementing the wrapped value at ptr until its original value is restored
 
 add( &72, data     )      ; H
 add(&101, data +  1)      ; e
