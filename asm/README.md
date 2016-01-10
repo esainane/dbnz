@@ -76,8 +76,8 @@ A label within a macro is considered a *local* label. *local* labels can only be
 
 ### Expressions
 Basic "pointer arithmetic" expressions, resolvable at compile time, are permitted as values for the dbnz instruction. For instance, the following are valid:
- * `dbmz data + 2, label`
- * `dbmz data - this, this + 2`
+ * `dbnz data + 2, label`
+ * `dbnz data - this, this + 2`
 
 Subtracting "this" or "data" is permitted. Doing so may lead to some rather interesting behavior. :>
 
