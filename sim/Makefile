@@ -1,8 +1,18 @@
 SOURCES=$(wildcard *.c)
 HEADERS=$(wildcard *.h)
+DEPS=$(wildcard *.d)
 OBJS := $(SOURCES:.c=.o)
+
+ifeq ($(UNAME), Linux)
+SOSUFFIX = so
+LIBPREFIX = lib
+else
+SOSUFFIX = dll
+LIBPREFIX =
+endif
+
 LIB_NAME=dbnz
-LIB_TARGET=lib$(LIB_NAME).so
+LIB_TARGET=$(LIBPREFIX)$(LIB_NAME).$(SOSUFFIX)
 
 CC=gcc
 CFLAGS=-g -O2 -fno-strict-aliasing
@@ -18,4 +28,4 @@ $(LIB_TARGET): $(OBJS) $(SOURCES) $(HEADERS)
 -include $(OBJS:.o=.d)
 
 clean:
-	rm -f *.o  *.d $(LIB_TARGET)
+	$(RM) $(OBJS) $(DEPS) $(LIB_TARGET)

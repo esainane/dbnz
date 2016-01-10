@@ -1,5 +1,4 @@
 %{
-#define ENABLE_TRACE
 #ifdef ENABLE_TRACE
 #define YYDEBUG 1
 #endif
