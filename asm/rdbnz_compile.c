@@ -16,38 +16,35 @@ struct locals {
 struct deferred {
   size_t num;
   size_t max;
-  struct dbnz_rval ***idents;
+  struct dbnz_rval **idents;
 };
 
-static void process_idents(struct dbnz_compile_state *s, struct deferred *deferred, struct locals *locals);
-static void mark_idents(struct deferred *deferred, struct dbnz_rval **rval);
+static unsigned int rval_copy_count = 0;
+static void process_deferred(struct dbnz_compile_state *s, struct deferred *deferred, struct locals *locals);
+static struct dbnz_rval *process_rval(struct dbnz_compile_state *s, struct deferred *deferred, struct dbnz_rval *rval);
 
-static void add_locals(struct dbnz_param *param, struct dbnz_rval *args, struct locals *locals, struct deferred *deferred, const char *target_id, const char *context) {
+static void add_locals(struct dbnz_compile_state *s, struct dbnz_param *param, struct dbnz_rval *args, struct locals *locals, struct deferred *deferred, const char *target_id, const char *context) {
   memset(locals, '\0', sizeof(struct locals));
   for (; param && args; param = param->next, args = args->next) {
-    if (!locals->max) {
+    if (locals->num == locals->max) {
       locals->max += 50;
       locals->keys = realloc(locals->keys, sizeof(char *) * locals->max);
-      locals->vals = realloc(locals->vals, sizeof(size_t) * locals->max);
-    } else if (locals->num == locals->max) {
-      fprintf(stderr, "Internal error: Hit locals limit, aborting! Bug the author to get rid of their workaround.\n");
-      exit(1);
+      locals->vals = realloc(locals->vals, sizeof(struct dbnz_rval) * locals->max);
     }
     locals->keys[locals->num] = param->id;
-    locals->vals[locals->num] = args;
-    mark_idents(deferred, &locals->vals[locals->num]); /* FIXME This is not safe with more than <max increment> locals! */
+    locals->vals[locals->num] = process_rval(s, deferred, args);
     ++locals->num;
   }
   if (param) {
     int needed;
     for (needed = 0; ++needed, param = param->next; ) ;
-    fprintf(stderr, "Macro '%s' called from %s requires %d more arguments!\n", target_id, context, needed);
+    fprintf(stderr, "Macro '%s' called from %s requires %d more arguments (expected %d)!\n", target_id, context, needed, locals->num + needed);
     exit(1);
   }
   if (args) {
-    int extra;
-    for (extra = 0; ++extra, args = args->next; ) ;
-    fprintf(stderr, "Macro '%s' called from %s requires %d fewer arguments!\n", target_id, context, extra);
+    int extra = 0;
+    while (++extra, args = args->next) ;
+    fprintf(stderr, "Macro '%s' called from %s requires %d fewer arguments (expected %d)!\n", target_id, context, extra, locals->num);
     exit(1);
   }
 }
@@ -56,7 +53,6 @@ static void add_locals(struct dbnz_param *param, struct dbnz_rval *args, struct 
 static void process_stmts(struct dbnz_macro *macros, struct dbnz_statementlist *stmtlist, struct dbnz_compile_state *s, struct locals locals, const char *context) {
   size_t start = s->exec_num;
   /* If we're the top level, our local labels are globals */
-  printf("Begin context: %s.\n", context);
   if (!s->globals) {
     s->globals = &locals;
   } else {
@@ -109,29 +105,36 @@ static void process_stmts(struct dbnz_macro *macros, struct dbnz_statementlist *
       }
       /* Establish locals and process */
       struct locals target_locals;
-      add_locals(target->argv, stmts->u.c.argv, &target_locals, &deferred, target_id, context);
+      add_locals(s, target->argv, stmts->u.c.argv, &target_locals, &deferred, target_id, context);
+      size_t stack_top = s->stack_top; /* Sanity check */
+      size_t reg_num = s->reg_num; /* Save the number of registers we are using. */
+      s->stack_top += reg_num;
       process_stmts(macros, &target->statements, s, target_locals, target_id);
+      s->stack_top -= reg_num;
+      /* Perform our sanity check */
+      if (s->stack_top != stack_top) {
+        fprintf(stderr, "Internal error: Stack top not restored after statement list finalization, expected %" PRIuMAX " received %" PRIuMAX ". This should never happen!\n", stack_top, s->stack_top);
+        exit(1);
+      }
+      s->reg_num = reg_num; /* Restore our register count */
     } break;
     case STMT_DBNZ:
-      if (!s->exec_max) {
+      if (s->exec_num + 2 > s->exec_max) {
           s->execs = realloc(s->execs, sizeof(struct dbnz_rval *) * (s->exec_max += 250));
-      } else if (s->exec_num + 2 > s->exec_max) {
-          fprintf(stderr, "Internal error: Hit execs limit, aborting! Bug the author to get rid of their workaround.\n");
-          exit(1);
       }
-      s->execs[s->exec_num] = stmts->u.d.target;
-      mark_idents(&deferred, &s->execs[s->exec_num]); /* FIXME Not safe, as above */
+      s->execs[s->exec_num] = process_rval(s, &deferred, stmts->u.d.target);
       ++s->exec_num;
-      s->execs[s->exec_num] = stmts->u.d.jump;
-      mark_idents(&deferred, &s->execs[s->exec_num]); /* FIXME Not safe, as above */
+      s->execs[s->exec_num] = process_rval(s, &deferred, stmts->u.d.jump);
       ++s->exec_num;
       break;
     }
     stmts = stmts->next;
   } while (stmts);
   --s->visited_num;
+#ifdef DBNZ_CELLNO_TRACE
   printf("Context %s from cells (prog + %" PRIuMAX ") to (prog + %" PRIuMAX ").\n", context, (uintmax_t) start, (uintmax_t) s->exec_num);
-  process_idents(s, &deferred, &locals);
+#endif
+  process_deferred(s, &deferred, &locals);
 }
 
 static void init_output(struct dbnz_compile_state *s, size_t memory) {
@@ -146,28 +149,64 @@ static void write_constants(struct dbnz_compile_state *s) {
   }
 }
 
-/* Simplify an rval during the initial pass */
-static void mark_idents(struct deferred *deferred, struct dbnz_rval **rval) {
-  switch ((*rval)->type) {
-  case RVAL_ADD:  /* Can only recurse and resolve parameters */
-  case RVAL_SUB:
-    mark_idents(deferred, &(*rval)->u.p.lhs);
-    mark_idents(deferred, &(*rval)->u.p.rhs);
+/*
+ * Translate AST entities into data suitable for resolution to cell lists.
+ * If an rval needs later modification, copy it and track it for deferred
+ * processing during the initial pass.
+ * Fixed AST elements may be copied directly into the executable space.
+ */
+static struct dbnz_rval *process_rval(struct dbnz_compile_state *s, struct deferred *deferred, struct dbnz_rval *rval) {
+  switch (rval->type) {
+  case RVAL_STACK:
+    if (rval->u.v > s->reg_num) {
+      s->reg_num = rval->u.v;
+    }
+    struct dbnz_rval *val = malloc(sizeof(struct dbnz_rval));
+    *val = (struct dbnz_rval) { .type = RVAL_INTEGER, .u = { .v = s->proglen - (s->stack_top + rval->u.v) }};
     break;
+  case RVAL_ADD:  /* Can only recurse and resolve parameters */
+  case RVAL_SUB: {
+    struct dbnz_rval *lret, *rret;
+    lret = process_rval(s, deferred, rval->u.p.lhs);
+    rret = process_rval(s, deferred, rval->u.p.rhs);
+    if (lret != rval->u.p.lhs || rret != rval->u.p.rhs) {
+      struct dbnz_rval *cpy = malloc(sizeof(struct dbnz_rval));
+      *cpy = *rval;
+      cpy->u.p.lhs = lret;
+      cpy->u.p.rhs = rret;
+      return cpy;
+    }
+    return rval;
+  }
   case RVAL_IDENTIFIER: /* These are layers of indirection to rvals that will be resolved in preprocessing. */
     if (deferred->num == deferred->max) {
         deferred->idents = realloc(deferred->idents, sizeof(struct dbnz_rval *) * (deferred->max += 15));
     }
-    deferred->idents[deferred->num++] = rval;
-    break;
+    /* Ensure only one context takes responsibility per copy */
+    struct dbnz_rval *cpy = malloc(sizeof(struct dbnz_rval));
+    *cpy = *rval;
+    cpy->type = RVAL_IDENTCOPY;
+    /* We should never see an RVAL_IDENTIFIER outside of statement list processing when we originally process it. */
+    /* We should never see an RVAL_IDENTCOPY outside of deferred resolution during statement list finalisation, and final program writing through the RVAL_REF indirection. */
+    /* An ident RVAL_REF may be copied around freely, but should always point directly to the authorative RVAL_IDENTCOPY. */
+    struct dbnz_rval *ref = malloc(sizeof(struct dbnz_rval));
+    ref->type = RVAL_REF;
+    ref->u.r = cpy;
+    /* We'll later modify this copy, resolving it based on local context. */
+    deferred->idents[deferred->num++] = cpy;
+    return ref;
+  case RVAL_IDENTCOPY:
+    fprintf(stderr, "Tried to process RVAL_IDENTCOPY not guarded by RVAL_REF, this should never happen!\n");
+    exit(1);
+  case RVAL_REF:
+    /* Deliberately do nothing, this will already be handled */
   case RVAL_CONSTANT:
   case RVAL_THIS:
   case RVAL_DATA:
-  case RVAL_STACK:
   case RVAL_INTEGER:
   case RVAL_LABEL:
-    break;
     /* Nothing to do */
+    return rval;
   }
 }
 
@@ -181,14 +220,14 @@ static struct dbnz_rval *find_local(const char *id, struct locals *locals) {
   return 0;
 }
 
-static void process_idents(struct dbnz_compile_state *s, struct deferred *deferred, struct locals *locals) {
+static void process_deferred(struct dbnz_compile_state *s, struct deferred *deferred, struct locals *locals) {
   int i;
   for (i = 0; i != deferred->num; ++i) {
-    if ((*deferred->idents[i])->type != RVAL_IDENTIFIER) {
+    if (deferred->idents[i]->type != RVAL_IDENTCOPY) {
       fprintf(stderr, "Internal error: Unexpected type in ident resolution, this should never happen!\n");
       exit(1);
     }
-    const char *id = (*deferred->idents[i])->u.n;
+    const char *id = deferred->idents[i]->u.n;
     struct dbnz_rval *ref = find_local(id, locals);
     if (!ref && locals != s->globals) {
       ref = find_local(id, s->globals);
@@ -197,9 +236,12 @@ static void process_idents(struct dbnz_compile_state *s, struct deferred *deferr
       fprintf(stderr, "Unable to process identifier '%s'!\n", id);
       exit(1);
     }
-    *deferred->idents[i] = ref;
+    *deferred->idents[i] = *ref;
     if (ref->type == RVAL_IDENTIFIER) {
-      fprintf(stderr, "Internal error: ident is still ident (%s) after resolution\n", ref->u.n);
+      fprintf(stderr, "Internal error: ident copy is AST data (!?) (%s) after resolution, this should never happen!\n", ref->u.n);
+    }
+    if (ref->type == RVAL_IDENTCOPY) {
+      fprintf(stderr, "Internal error: ident copy is still ident copy %s after resolution, this should never happen!\n", ref->u.n);
     }
   }
 }
@@ -211,33 +253,33 @@ static size_t resolve_rval(struct dbnz_compile_state *s, struct dbnz_rval *rval,
     fprintf(stderr, "Internal error: Found unresolved constant in rval during final compilation pass, this should never happen!\n");
     exit(1);
   case RVAL_STACK:
-    rval->u.v += s->stack_len;
-    break;
+    fprintf(stderr, "Internal error: Found unresolved stack address in rval during final compilation pass, this should never happen!\n");
+    exit(1);
   case RVAL_DATA:
-    rval->u.v = s->constant_num + s->exec_num;
-    break;
+    return s->constant_num + s->exec_num;
+  case RVAL_REF:
+    return resolve_rval(s, rval->u.r, where);
+  case RVAL_IDENTCOPY:
   case RVAL_IDENTIFIER:
-    fprintf(stderr, "Internal error: Found unresolved identifier '%s' in rval at cell '%" PRIuMAX "' (prog + '%" PRIuMAX "') uring final compilation pass, this should never happen!\n", rval->u.n, (uintmax_t) where, (uintmax_t) (where - s->constant_num));
+    fprintf(stderr, "Internal error: Found unresolved %sidentifier '%s' in rval at cell '%" PRIuMAX "' (prog + '%" PRIuMAX "') during final compilation pass, this should never happen!\n",
+            rval->type == RVAL_IDENTCOPY ? "copy of " : "", rval->u.n, (uintmax_t) where, (uintmax_t) (where - s->constant_num));
     exit(1);
   case RVAL_ADD:
     resolve_rval(s, rval->u.p.lhs, where);
     resolve_rval(s, rval->u.p.rhs, where);
-    rval->u.v = rval->u.p.lhs->u.v + rval->u.p.rhs->u.v;
-    break;
+    return rval->u.p.lhs->u.v + rval->u.p.rhs->u.v;
   case RVAL_SUB:
     resolve_rval(s, rval->u.p.lhs, where);
     resolve_rval(s, rval->u.p.rhs, where);
-    rval->u.v = rval->u.p.lhs->u.v - rval->u.p.rhs->u.v;
-    break;
+    return rval->u.p.lhs->u.v - rval->u.p.rhs->u.v;
   case RVAL_THIS:
-    rval->u.v = where;
-    break;
-  case RVAL_INTEGER:
+    return where;
   case RVAL_LABEL:
+    return rval->u.v + s->constant_num;
+  case RVAL_INTEGER:
     /* Nothing to do */
-    break;
+    return rval->u.v;
   }
-  rval->type = RVAL_INTEGER;
 }
 
 /* Write the program to state output, fully resolving all expressions */
