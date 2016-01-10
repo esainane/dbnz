@@ -19,9 +19,14 @@ struct deferred {
   struct dbnz_rval **idents;
 };
 
+extern FILE * dbnz_output;
+extern char **source_lines;
+
 static unsigned int rval_copy_count = 0;
 static void process_deferred(struct dbnz_compile_state *s, struct deferred *deferred, struct locals *locals);
 static struct dbnz_rval *process_rval(struct dbnz_compile_state *s, struct deferred *deferred, struct dbnz_rval *rval);
+
+static const char out_padding[] = "                        ";
 
 static void add_locals(struct dbnz_compile_state *s, struct dbnz_param *param, struct dbnz_rval *args, struct locals *locals, struct deferred *deferred, const char *target_id, const char *context) {
   memset(locals, '\0', sizeof(struct locals));
@@ -29,7 +34,7 @@ static void add_locals(struct dbnz_compile_state *s, struct dbnz_param *param, s
     if (locals->num == locals->max) {
       locals->max += 50;
       locals->keys = realloc(locals->keys, sizeof(char *) * locals->max);
-      locals->vals = realloc(locals->vals, sizeof(struct dbnz_rval) * locals->max);
+      locals->vals = realloc(locals->vals, sizeof(struct dbnz_rval *) * locals->max);
     }
     locals->keys[locals->num] = param->id;
     locals->vals[locals->num] = process_rval(s, deferred, args);
@@ -78,9 +83,7 @@ static void process_stmts(struct dbnz_macro *macros, struct dbnz_statementlist *
       /* XXX: Low hanging fruit: The locals of each function are resolved at the end, lookups could be accelerated by sorting locals as soon as it starts to matter */
       locals.keys[locals.num] = stmts->u.n;
       locals.vals[locals.num] = malloc(sizeof(struct dbnz_rval));
-      memset(locals.vals[locals.num], '\0', sizeof(struct dbnz_rval));
-      locals.vals[locals.num]->u.v = s->exec_num;
-      locals.vals[locals.num]->type = RVAL_LABEL;
+      *locals.vals[locals.num] = (struct dbnz_rval) { .line_no = stmts->line_no, .type = RVAL_LABEL, .u = { .v = s->exec_num }};
       ++locals.num;
       break;
     case STMT_CALL: {
@@ -137,15 +140,11 @@ static void process_stmts(struct dbnz_macro *macros, struct dbnz_statementlist *
   process_deferred(s, &deferred, &locals);
 }
 
-static void init_output(struct dbnz_compile_state *s, size_t memory) {
-  s->output_max = memory;
-  s->output = malloc(sizeof(size_t *) * memory);
-}
-
 static void write_constants(struct dbnz_compile_state *s) {
   size_t i;
   for (i = 0; i != s->constant_num; ++i) {
-    s->output[s->output_num++] = s->constants[i];
+    int len = fprintf(dbnz_output, "%" PRIuMAX, (uintmax_t) s->constants[i]);
+    fprintf(dbnz_output, "%s; cell %3d    ; constant %" PRIuMAX "\n", len < sizeof(out_padding) ? out_padding + len : "", i, (uintmax_t) s->constants[i]);
   }
 }
 
@@ -162,7 +161,7 @@ static struct dbnz_rval *process_rval(struct dbnz_compile_state *s, struct defer
       s->reg_num = rval->u.v;
     }
     struct dbnz_rval *val = malloc(sizeof(struct dbnz_rval));
-    *val = (struct dbnz_rval) { .type = RVAL_INTEGER, .u = { .v = s->proglen - (s->stack_top + rval->u.v) }};
+    *val = (struct dbnz_rval) { .type = RVAL_INTEGER, .line_no = rval->line_no, .u = { .v = s->proglen - (s->stack_top + rval->u.v) }};
     break;
   case RVAL_ADD:  /* Can only recurse and resolve parameters */
   case RVAL_SUB: {
@@ -192,6 +191,7 @@ static struct dbnz_rval *process_rval(struct dbnz_compile_state *s, struct defer
     struct dbnz_rval *ref = malloc(sizeof(struct dbnz_rval));
     ref->type = RVAL_REF;
     ref->u.r = cpy;
+    ref->line_no = cpy->line_no;
     /* We'll later modify this copy, resolving it based on local context. */
     deferred->idents[deferred->num++] = cpy;
     return ref;
@@ -265,13 +265,9 @@ static size_t resolve_rval(struct dbnz_compile_state *s, struct dbnz_rval *rval,
             rval->type == RVAL_IDENTCOPY ? "copy of " : "", rval->u.n, (uintmax_t) where, (uintmax_t) (where - s->constant_num));
     exit(1);
   case RVAL_ADD:
-    resolve_rval(s, rval->u.p.lhs, where);
-    resolve_rval(s, rval->u.p.rhs, where);
-    return rval->u.p.lhs->u.v + rval->u.p.rhs->u.v;
+    return resolve_rval(s, rval->u.p.lhs, where) + resolve_rval(s, rval->u.p.rhs, where);
   case RVAL_SUB:
-    resolve_rval(s, rval->u.p.lhs, where);
-    resolve_rval(s, rval->u.p.rhs, where);
-    return rval->u.p.lhs->u.v - rval->u.p.rhs->u.v;
+    return resolve_rval(s, rval->u.p.lhs, where) - resolve_rval(s, rval->u.p.rhs, where);
   case RVAL_THIS:
     return where;
   case RVAL_LABEL:
@@ -285,8 +281,14 @@ static size_t resolve_rval(struct dbnz_compile_state *s, struct dbnz_rval *rval,
 /* Write the program to state output, fully resolving all expressions */
 static void write_program(struct dbnz_compile_state *s) {
   size_t i;
+  int len = 0;
   for (i = 0; i != s->exec_num; ++i) {
-    s->output[s->output_num++] = resolve_rval(s, s->execs[i], i + s->constant_num);
+    size_t val = resolve_rval(s, s->execs[i], i + s->constant_num);
+    len += fprintf(dbnz_output, "%" PRIuMAX " ", (uintmax_t) val);
+    if (i & 1) {
+      fprintf(dbnz_output, "%s; cell %3d,%3d; source line %3d: %s\n", len < sizeof(out_padding) ? out_padding + len : "", s->constant_num + i - 1, s->constant_num + i, s->execs[i]->line_no, source_lines[s->execs[i]->line_no] ? source_lines[s->execs[i]->line_no] : "<NULL>");
+      len = 0;
+    }
   }
 }
 
@@ -308,10 +310,10 @@ size_t dbnz_pool_constant(size_t value, struct dbnz_compile_state *s) {
 void dbnz_compile_program(struct dbnz_macro *macros, struct dbnz_statementlist stmtlist, size_t memory, struct dbnz_compile_state *s) {
   struct locals l;
   memset(&l, '\0', sizeof(struct locals));
+  s->proglen = memory;
   process_stmts(macros, &stmtlist, s, l, "<top level>");
 
-  init_output(s, memory);
-
+  fprintf(dbnz_output, "%" PRIuMAX "\n", (uintmax_t) memory);
   write_constants(s);
   write_program(s);
 }

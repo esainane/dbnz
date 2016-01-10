@@ -63,6 +63,7 @@ struct dbnz_rval {
     char *n;
     struct dbnz_rval *r;
   } u;
+  int line_no;
   struct dbnz_rval *next;
 };
 
@@ -87,6 +88,7 @@ struct dbnz_statement {
     struct dbnz_call_data c;
     struct dbnz_dbnz_data d;
   } u;
+  int line_no;
   struct dbnz_statement *next;
 };
 

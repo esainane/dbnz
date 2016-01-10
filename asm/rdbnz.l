@@ -1,15 +1,39 @@
 %{
 #include <stdlib.h>
+#include <string.h>
 #include "rdbnz.h"
 #include "y.tab.h"
 void yyerror(char *);
 
 char linebuf[500];
+int source_line_num = 0;
+int source_line_max = 0;
+char **source_lines;
 int dirty = 0;
 
 void yyerror(char *s) {
     fprintf(stderr, "Error '%s' at line %d, near %s:\n > %s\n", s, yylineno, yytext, linebuf);
 }
+
+#define INPUT_NEWLINE(never_blank) { \
+  if (yytext[1]) { \
+    /* Not a blank line */ \
+    strncpy(linebuf, yytext+1, sizeof(linebuf)); \
+    if (yylineno >= source_line_max) { \
+      source_lines = realloc(source_lines, sizeof(char *) * (source_line_max += 50)); \
+    } \
+    if (++source_line_num > yylineno) { \
+      memset(source_lines + source_line_num, '\0', yylineno - source_line_num); \
+      source_line_num = yylineno; \
+    } \
+    source_lines[yylineno] = strdup(yytext+1); \
+    yyless(1); \
+  } else if (!never_blank) { \
+    /* Blank line, ie. \n\n */ \
+    return BLANKLINE; \
+  } \
+}
+
 %}
 
 %option stack
@@ -36,8 +60,7 @@ void yyerror(char *s) {
 <COMMENT>{
 [^\n]+
 \n[^\n]*    {
-                strncpy(linebuf, yytext+1, sizeof(linebuf));
-                yyless(1);
+                INPUT_NEWLINE(0);
                 yy_pop_state();
             }
 }
@@ -46,8 +69,7 @@ void yyerror(char *s) {
 "*/"        yy_pop_state();
 [^*\n]+
 \n[^\n]*    {
-                strncpy(linebuf, yytext+1, sizeof(linebuf));
-                yyless(1);
+                INPUT_NEWLINE(1);
             }
 }
 
@@ -84,15 +106,7 @@ void yyerror(char *s) {
             }
 
 \n[^\n]*    {
-                if (yytext[1]) {
-                  /* Not a blank line */
-                  strncpy(linebuf, yytext+1, sizeof(linebuf));
-                  printf("line: %s\n", yytext+1);
-                  yyless(1);
-                } else {
-                  /* Blank line, ie. \n\n */
-                  return BLANKLINE;
-                }
+                  INPUT_NEWLINE(0);
             }
 
 [-+(),]     {

@@ -17,10 +17,6 @@ struct dbnz_compile_state {
   size_t visited_num;
   size_t visited_max;
   const char **visited;
-  /* Final output. Numbers representing the constant pool and compiled program. */
-  size_t output_num;
-  size_t output_max;
-  size_t *output;
   /* Length of registers used by enclosing contexts. */
   size_t stack_top;
   /* Length of registers used by the current context. */
