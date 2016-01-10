@@ -26,7 +26,8 @@ dbnz @1, this - 3  ; If we've fallen through, we know we'll jump to our label no
 
 def halt(status)
 ; Causes the interpreter to exit with the specified status code, by jumping to a specially interpreted unaligned address.
-add(status, status)
+add(status, @1)
+add(@1, status)
 inc(status)
 jmp(status)
 
