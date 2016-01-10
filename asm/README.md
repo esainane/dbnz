@@ -24,7 +24,8 @@ Language
 
 ### Overall grammar
 ```
-program ::= macrolist statementlist
+program ::= [importlist] [macrolist] statementlist
+importlist ::= import IDENTIFIER [importlist]
 macrolist ::= macro [macrolist]
 macro ::= "def" IDENTIFIER "(" paramlist ")" statementlist BLANKLINE
 paramlist ::= IDENTIFIER [paramtail]
@@ -49,7 +50,7 @@ Macros may call any macro non-recursively, including macros that are defined lat
 
 Single-line comments beginning with `;` or `//` are permitted. Multi-line comments between `/*` and `*/` are permitted.
 
-Completely blank lines are only permitted at the beginning of a program, at the end of a program, and after macros. A macro definition is terminated by such a blank line.
+Completely blank lines are only permitted at the beginning of a program, at the end of a program, and after macros or imports. A macro definition is terminated by such a blank line.
 
 By convention, visual space within a statement list should be provided by a single ; that is also aligned with other ; to the right of the statement list.
 
@@ -61,6 +62,7 @@ A few keywords are provided for convenience, which have special meanings as valu
 In additional to the above, the following keywords are reserved and may not be used as identifiers:
  * `def` - Indicates the start of a macro
  * `dbnz` - Indicates the dbnz instruction
+ * `import` - Imports a file of the given identifier with the .rdbnz suffix. This import is relative to the working directory - where the compiler is running, not the directory of the current file. This may be changed later.
 
 ### Sigils
 By default, a number is a number. As the dbnz instruction interprets its parameters as addresses, there are two sigils available to convert numbers into meaningful addresses:
