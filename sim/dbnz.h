@@ -2,6 +2,7 @@
 #ifndef DBNZ_H
 #define DBNZ_H
 
+#include <stdlib.h>
 #include <stdint.h>
 
 struct dbnz;
