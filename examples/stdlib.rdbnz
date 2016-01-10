@@ -58,23 +58,3 @@ dbnz ptr, zeroptr  ; zero out ptr, adding MAX - ptr to @1
 :zerotmp
 dec(ptr)
 dbnz @1, zerotmp   ; Start decrementing the wrapped value at ptr until its original value is restored
-
-add( &72, data     )      ; H
-add(&101, data +  1)      ; e
-add(&108, data +  2)      ; l
-add(&108, data +  3)      ; l
-add(&111, data +  4)      ; o
-add( &44, data +  5)      ; ,
-add( &32, data +  6)      ;
-add(&119, data +  7)      ; w
-add(&111, data +  8)      ; o
-add(&114, data +  9)      ; r
-add(&108, data + 10)      ; l
-add(&100, data + 11)      ; d
-add( &33, data + 12)      ; !
-                          ; ^ Hello, world!
-add(&100, data + 13)
-sub( &58, data + 13)      ; 42
-                          ; The answer to life, the universe, and everything
-dup(data + 13, data + 14) ; Everyone deserves a second chance
-halt(&0)

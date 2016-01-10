@@ -4,16 +4,23 @@
 #endif
     #include <stdlib.h>
     #include <stdio.h>
+    #include <string.h>
     #include "rdbnz.h"
     #include "rdbnz_compile.h"
     void yyerror(char *);
     int yylex(void);
+    /* copy of YY_BUF_SIZE accessible here */
+    extern const unsigned buf_size;
     extern int yylineno;
     extern FILE * yyin;
     FILE * dbnz_output;
 
     static size_t dbnz_mem;
     static struct dbnz_compile_state dbnz_state;
+
+    /* Allow imports up to 20 deep */
+    static const unsigned inlist_max = 20;
+    unsigned inlist_count;
 %}
 
 %union {
@@ -28,7 +35,7 @@
 
 /* Tokens */
 
-%token DEF THIS DBNZ DATA BLANKLINE
+%token DEF THIS DBNZ DATA BLANKLINE IMPORT
 %token <s> LABEL IDENTIFIER
 %token <i> INTEGER CONSTANT STACK
 %left '+' '-'
@@ -56,8 +63,30 @@
 %%
 
 program:
-        chomp macrolist statementlist chomp   { dbnz_compile_program($2, $3, dbnz_mem, &dbnz_state); }
+        chomp importlist macrolist statementlist chomp   { dbnz_compile_program($3, $4, dbnz_mem, &dbnz_state); }
         ;
+
+importlist:
+        import chomp importlist
+        | /* NULL */
+        ;
+
+import:
+        IMPORT IDENTIFIER                     {
+                                                char *filename = malloc(strlen($2) + 6 + 1);
+                                                sprintf(filename, "%s.rdbnz", $2);
+                                                if (inlist_count == inlist_max) {
+                                                  fprintf(stderr, "Too many nested imports (%d), aborting!\n", inlist_max);
+                                                  exit(1);
+                                                }
+                                                yyin = fopen(filename, "r");
+                                                if (!yyin) {
+                                                  fprintf(stderr, "Unable to open target import file (%s), aborting!\n", filename);
+                                                  exit(1);
+                                                }
+                                                yypush_buffer_state(yy_create_buffer(yyin, buf_size));
+                                                free(filename);
+                                              }
 
 macrolist:
         macro chomp macrolist                 { $$ = $1; $$->next = $3; }

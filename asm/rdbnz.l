@@ -5,11 +5,12 @@
 #include "y.tab.h"
 void yyerror(char *);
 
-char linebuf[500];
+static char linebuf[500];
 int source_line_num = 0;
-int source_line_max = 0;
+static int source_line_max = 0;
 char **source_lines;
-int dirty = 0;
+
+const unsigned buf_size = YY_BUF_SIZE;
 
 void yyerror(char *s) {
     fprintf(stderr, "Error '%s' at line %d, near %s:\n > %s\n", s, yylineno, yytext, linebuf);
@@ -80,6 +81,13 @@ void yyerror(char *s) {
 
   /* Main rules */
 
+<<EOF>> {
+  yypop_buffer_state();
+  if (!YY_CURRENT_BUFFER) {
+    yyterminate();
+  }
+}
+
 0           {
                 yylval.i = atoi(yytext);
                 return INTEGER;
@@ -117,6 +125,7 @@ void yyerror(char *s) {
 "this"          return THIS;
 "data"          return DATA;
 "dbnz"          return DBNZ;
+"import"        return IMPORT;
 
 [ \t]+      ;   /* ignore whitespace */
 
@@ -134,6 +143,7 @@ void yyerror(char *s) {
 
 
 %%
+
 int yywrap(void) {
-    return 1;
+  return 1;
 }
