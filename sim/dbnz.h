@@ -13,6 +13,11 @@ struct dbnz;
 #endif
 
 /**
+ * Loads in a dbnz file and executes it.
+ */
+int dbnz_file_bootstrap(const char *filename, void (*stepcallback)(const DBNZ_CELL_TYPE *state, size_t cursor, unsigned int step));
+
+/**
  * @param state Initial state for the DBNZ machine
  * @param plen Program length; number of cells in the provided state
  * @param stepcallback Callback to fire after every step, optional. Parameters are the current state, the in-state offset to the cursor, and a counter for the number of steps taken.
