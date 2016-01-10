@@ -10,12 +10,13 @@ struct dbnz;
 #if !defined(DBNZ_CELL_WIDTH) || !defined(DBNZ_CELL_TYPE)
 #define DBNZ_CELL_MASK 0xffff
 #define DBNZ_CELL_TYPE uint16_t
+#define DBNZ_CELL_FMT PRIu16
 #endif
 
 /**
  * Loads in a dbnz file and executes it.
  */
-int dbnz_file_bootstrap(const char *filename, void (*stepcallback)(const DBNZ_CELL_TYPE *state, size_t cursor, unsigned int step));
+int dbnz_file_bootstrap(const char *filename, void (*stepcallback)(const DBNZ_CELL_TYPE *state, size_t plen, size_t cursor, unsigned int step));
 
 /**
  * @param state Initial state for the DBNZ machine
@@ -24,6 +25,6 @@ int dbnz_file_bootstrap(const char *filename, void (*stepcallback)(const DBNZ_CE
  *
  * @return Program's exit code
  */
-int dbnz_bootstrap(DBNZ_CELL_TYPE *state, size_t plen, void (*stepcallback)(const DBNZ_CELL_TYPE *state, size_t cursor, unsigned int step));
+int dbnz_bootstrap(DBNZ_CELL_TYPE *state, size_t plen, size_t start, void (*stepcallback)(const DBNZ_CELL_TYPE *state, size_t plen, size_t cursor, unsigned int step));
 
 #endif /* DBNZ_H */

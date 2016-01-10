@@ -14,14 +14,14 @@ static void dbnz_bounds_hcf(const char *what, unsigned int step, size_t cursor, 
 }
 
 
-int dbnz_file_bootstrap(const char *filename, void (*stepcallback)(const DBNZ_CELL_TYPE *state, size_t cursor, unsigned int step)) {
+int dbnz_file_bootstrap(const char *filename, void (*stepcallback)(const DBNZ_CELL_TYPE *state, size_t plen, size_t cursor, unsigned int step)) {
   FILE * f = fopen(filename, "r");
   if (!f) {
     fprintf(stderr, "Unable to open file '%s', aborting!\n", filename);
     exit(1);
   }
-  size_t plen;
-  fscanf(f, " %z ", &plen);
+  size_t plen, start;
+  fscanf(f, " %z %z ", &plen, &start);
   DBNZ_CELL_TYPE *state = malloc(sizeof(DBNZ_CELL_TYPE) * plen);
   memset(state, '\0', sizeof(DBNZ_CELL_TYPE) * plen);
   size_t offset;
@@ -30,18 +30,21 @@ int dbnz_file_bootstrap(const char *filename, void (*stepcallback)(const DBNZ_CE
       break;
     }
   }
-  return dbnz_bootstrap(state, plen, stepcallback);
+  return dbnz_bootstrap(state, plen, start, stepcallback);
 }
 
-int dbnz_bootstrap(DBNZ_CELL_TYPE *state, size_t plen, void (*stepcallback)(const DBNZ_CELL_TYPE *state, size_t cursor, unsigned int step)) {
-  size_t cursor = 0; /* Start at the first instruction */
+int dbnz_bootstrap(DBNZ_CELL_TYPE *state, size_t plen, size_t cursor, void (*stepcallback)(const DBNZ_CELL_TYPE *state, size_t plen, size_t cursor, unsigned int step)) {
+  if (cursor & 1) {
+    fprintf(stderr, "Invalid starting position %" PRIuMAX  ", aborting!\n");
+    exit(1);
+  }
   unsigned int step = 0;
   for (;;) {
     if (cursor >= plen) {
       dbnz_bounds_hcf("Execution cursor", step, cursor, plen);
     }
     if (stepcallback) {
-      stepcallback(state, cursor, step);
+      stepcallback(state, plen, cursor, step);
     }
     size_t target = state[cursor];
     if (target >= plen) {

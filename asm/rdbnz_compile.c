@@ -144,7 +144,12 @@ static void write_constants(struct dbnz_compile_state *s) {
   size_t i;
   for (i = 0; i != s->constant_num; ++i) {
     int len = fprintf(dbnz_output, "%" PRIuMAX, (uintmax_t) s->constants[i]);
-    fprintf(dbnz_output, "%s; cell %3d    ; constant %" PRIuMAX "\n", len < sizeof(out_padding) ? out_padding + len : "", i, (uintmax_t) s->constants[i]);
+    fprintf(dbnz_output, "%s; cell %3" PRIuMAX "    ; constant %" PRIuMAX "\n", len < sizeof(out_padding) ? out_padding + len : "", (uintmax_t) i, (uintmax_t) s->constants[i]);
+  }
+  if (s->constant_num & 1) {
+    int len = fprintf(dbnz_output, "0");
+    fprintf(dbnz_output, "%s; cell %3" PRIuMAX "    ; alignment padding\n", len < sizeof(out_padding) ? out_padding + len : "", (uintmax_t) s->constant_num);
+    ++s->constant_num;
   }
 }
 
@@ -313,7 +318,7 @@ void dbnz_compile_program(struct dbnz_macro *macros, struct dbnz_statementlist s
   s->proglen = memory;
   process_stmts(macros, &stmtlist, s, l, "<top level>");
 
-  fprintf(dbnz_output, "%" PRIuMAX "\n", (uintmax_t) memory);
+  fprintf(dbnz_output, "%" PRIuMAX " %" PRIuMAX "\n", (uintmax_t) memory, (uintmax_t) (s->constant_num & 1 ? s->constant_num + 1 : s->constant_num));
   write_constants(s);
   write_program(s);
 }
