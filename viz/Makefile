@@ -1,7 +1,10 @@
+
+include ../make.defs
+
 SOURCES=$(wildcard *.c)
 HEADERS=$(wildcard *.h)
 DEPS=$(wildcard *.d)
-OBJS := $(SOURCES:.c=.o)
+OBJS:=$(SOURCES:.c=.o)
 
 ifeq ($(UNAME), Linux)
 TARGET=inspect
@@ -9,9 +12,9 @@ else
 TARGET=inspect.exe
 endif
 
-CC=gcc
-CFLAGS=-g -O2 -fno-strict-aliasing
-LFLAGS=-I../sim -L../sim -ldbnz
+CC?=gcc
+CFLAGS:=$(LFLAGS) -g -O2 -fno-strict-aliasing
+LFLAGS:=$(LFLAGS) -I../sim -L../sim -ldbnz
 
 all: $(TARGET)
 $(TARGET): $(OBJS) $(SOURCES) $(HEADERS)

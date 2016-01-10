@@ -1,15 +1,24 @@
 
-OBJS=$(wildcard *.dbnz)
+include ../make.defs
+
+OBJS:=$(wildcard *.dbnz)
 
 ifeq ($(UNAME), Linux)
-CC = ../asm/dbnzc
+DBNZC?=../asm/dbnzc
+DBNZRE?=../viz/inspect
 else
-CC = ../asm/dbnzc.exe
+DBNZC?=../asm/dbnzc.exe
+DBNZRE?=../viz/inspect.exe
 endif
-MEMORY = 65536
+MEMORY=65536
 
-helloworld.dbnz: helloworld.rdbnz stdlib.rdbnz $(CC)
-	$(CC) $(MEMORY) $< $@
+TARGET?=helloworld.dbnz
+
+%.dbnz: %.rdbnz stdlib.rdbnz $(DBNZC)
+	$(DBNZC) $(MEMORY) $< $@
 
 clean:
 	$(RM) $(OBJS)
+
+run: $(TARGET) $(DBNZRE)
+	LD_LIBRARY_PATH=../sim/ $(DBNZRE) $(TARGET)

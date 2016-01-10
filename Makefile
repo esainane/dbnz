@@ -1,4 +1,6 @@
 
+include make.defs
+
 SUBDIRS = sim asm viz examples
 CLEANDIRS = $(SUBDIRS:%=clean-%)
 

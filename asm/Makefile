@@ -1,30 +1,30 @@
-SOURCES=$(wildcard *.c)
-HEADERS=$(wildcard *.h)
-OBJS := $(SOURCES:.c=.o)
+
+include ../make.defs
 
 ifeq ($(UNAME), Linux)
-TARGET = dbnzc
+TARGET=dbnzc
 else
-TARGET = dbnzc.exe
+TARGET=dbnzc.exe
 endif
 
-BISON=bison
-FLEX=flex
-CC=gcc
-CFLAGS=-g -O2 -fno-strict-aliasing -fstack-protector-all
+BISON?=bison
+FLEX?=flex
+CC?=gcc
+CFLAGS:=$(CFLAGS) -g -O2 -fno-strict-aliasing -fstack-protector-all
+BISONFLAGS:=$(BISONFLAGS) -y -d
 
 ifeq ($(VERBOSE), 1)
 # Parsing debugging options:
 # If we should also generate a file explaining the state explanations
-EXPLAIN=-v
+BISONFLAGS:=$(BISONFLAGS) -v
 # If we should provide a detailed trace whenever we parse a file
-RUNTIME_TRACE=-DENABLE_TRACE
+CFLAGS:=$(CFLAGS) -DENABLE_TRACE
 endif
 
 all: $(TARGET)
 
 y.tab.c y.tab.h y.output: rdbnz.y rdbnz.h
-	$(BISON) -y -d $(EXPLAIN) rdbnz.y
+	$(BISON) $(BISONFLAGS) rdbnz.y
 
 lex.yy.c: rdbnz.l rdbnz.h
 	$(FLEX) rdbnz.l

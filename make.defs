@@ -1,0 +1,5 @@
+
+ifeq (0,${MAKELEVEL})
+UNAME := $(shell uname)
+MAKE := ${MAKE} UNAME=${UNAME}
+endif
