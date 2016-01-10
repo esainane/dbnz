@@ -37,11 +37,11 @@ int dbnz_bootstrap(DBNZ_CELL_TYPE *state, size_t plen, void (*stepcallback)(cons
   size_t cursor = 0; /* Start at the first instruction */
   unsigned int step = 0;
   for (;;) {
-    if (cursor & 1) {
-      return cursor >> 1;
-    }
     if (cursor >= plen) {
       dbnz_bounds_hcf("Execution cursor", step, cursor, plen);
+    }
+    if (stepcallback) {
+      stepcallback(state, cursor, step);
     }
     size_t target = state[cursor];
     if (target >= plen) {
@@ -51,8 +51,8 @@ int dbnz_bootstrap(DBNZ_CELL_TYPE *state, size_t plen, void (*stepcallback)(cons
     state[target] &= DBNZ_CELL_MASK;
     /* Branch if non zero, otherwise move to the next line */
     cursor = state[target] ? state[cursor + 1] : cursor + 2;
-    if (stepcallback) {
-      stepcallback(state, cursor, step);
+    if (cursor & 1) {
+      return cursor >> 1;
     }
     ++step;
   }
