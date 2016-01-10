@@ -54,9 +54,19 @@ Completely blank lines are only permitted at the beginning of a program, at the 
 By convention, visual space within a statement list should be provided by a single ; that is also aligned with other ; to the right of the statement list.
 
 ### Keywords
-A few special keywords are also provided for convenience:
- * this - Refers to the current cell. If used in a macro, refers to the cell that immediately follows.
- * data - Resolves to the cell past the end of the compiled program.
+A few keywords are provided for convenience, which have special meanings as values:
+ * `this` - Refers to the current cell. If used in a macro, refers to the cell that immediately follows.
+ * `data` - Resolves to the cell past the end of the compiled program.
+
+In additional to the above, the following keywords are reserved and may not be used as identifiers:
+ * `def` - Indicates the start of a macro
+ * `dbnz` - Indicates the dbnz instruction
+
+### Sigils
+By default, a number is a number. As the dbnz instruction interprets its parameters as addresses, there are two sigils available to convert numbers into meaningful addresses:
+ - `&value` - "reference-to" value. When encountered during compilation, the compiler adds the value to the constant pool (if not already present), and returns the address of the value in the constant pool.
+ - `@reg` - "register". Temporary space allocated on the stack for this statement list. Grows downward. Not technically a register, since the simulated machine doesn't have any, but used for a similar purpose.
+
 
 ### Labels
 Labels are also provided. An identifier preceded by a colon appearing on its own line will not emit any instructions.
@@ -72,17 +82,17 @@ Basic "pointer arithmetic" expressions, resolvable at compile time, are permitte
 Subtracting "this" or "data" is permitted. Doing so may lead to some rather interesting behavior. :>
 
 ### Constants
-Specifying &value, such as &42, will create an entry in the "constant pool" which contains the literal value 42, and &value will resolve to the cell in the constant pool where 42 is stored. Multiple references to the same constant will always resolve to the same constant cell address.
+Specifying &value, such as `&42`, will create an entry in the "constant pool" which contains the literal value `42`, and `&value` will resolve to the cell in the constant pool where `value` is stored. Multiple references to the same constant will always resolve to the same constant cell address.
 
-By convention, it is assumed that this will only ever be used by macros such as the provided dup() that take care to restore their original value. However, there are no safety belts here if you want to try something Fun. :>
+By convention, it is assumed that this will only ever be used by macros, such as the provided dup(), that take care to restore their original value. However, there are no safety belts here if you want to try something Fun. :>
 
 ### Heap
-The heap is an informal name for the state space between the end of the compiled program and the stack. A helper constant keyword "data" refers to the first cell past the end of the compiled program, ie. the start of the heap. No assertions or assumptions are made about usage or management.
+The heap is an informal name for the state space between the end of the compiled program and the stack. A helper constant keyword `data` refers to the first cell past the end of the compiled program, ie. the start of the heap. No assertions or assumptions are made about usage or management.
 
 You could add a convention that has "allocations" increment a counter on the heap, and compact (shifting downwards) the heap and reducing this counter when memory is freed. If you also keep track of the stack length, you could trigger some handler when you would want to grow the heap into used stack space. This would probably only be a panic halt, unless you feel like implementing your own oomkiller. :>
 
 ### Stack
-Specifying @value, such as @42, resolves to a temporary stack cell. Stack slots are allocated from @1 onwards - @0 will produce a parse error.
+Specifying `@value`, such as `@42`, resolves to a temporary stack cell. Stack slots are allocated from `@1` onwards - `@0` will produce a parse error.
 
 Stacks cells should generally be considered uninitialized. It is possible to add a own convention that has your functions zero parameters when they're done, if you would like to assume stack cells come zeroed.
 
