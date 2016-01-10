@@ -4,9 +4,9 @@ DEPS=$(wildcard *.d)
 OBJS := $(SOURCES:.c=.o)
 
 ifeq ($(UNAME), Linux)
-TARGET = viz
+TARGET=inspect
 else
-TARGET = viz.exe
+TARGET=inspect.exe
 endif
 
 CC=gcc
