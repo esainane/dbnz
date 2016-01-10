@@ -24,8 +24,8 @@ static void print_values(size_t count, DBNZ_CELL_TYPE value) {
 }
 
 static void dump_mem(const DBNZ_CELL_TYPE *state, size_t plen) {
-  printf("Memory dump: plen %" PRIuMAX "\n", (uintmax_t) plen);
-  DBNZ_CELL_TYPE value;
+  printf("Memory dump: state length: %" PRIuMAX "\n", (uintmax_t) plen);
+  DBNZ_CELL_TYPE value = 0;
   size_t count = 0;
   size_t i;
   for (i = 0; i != plen; ++i) {
@@ -43,8 +43,10 @@ static void dump_mem(const DBNZ_CELL_TYPE *state, size_t plen) {
 static void stepcallback(const DBNZ_CELL_TYPE *state, size_t plen, size_t cursor, unsigned int step) {
   if (!step)
     dump_mem(state, plen);
+#ifdef HEARTBEAT
   if (!(step & 1023))
     printf("Step %u, cursor %" PRIuMAX "\n", step, (uintmax_t) cursor);
+#endif
   current_state = state;
   last_plen = plen;
   last_step = step;
@@ -59,7 +61,7 @@ int main(int argc, char **argv) {
     exit(1);
   }
   int ret = dbnz_file_bootstrap(argv[1], &stepcallback);
-  printf("Execution finished after %u steps.\n.", last_step);
+  printf("Execution finished returning %d after %u steps.\n", ret, last_step);
   dump_mem(current_state, last_plen);
   return 0;
 }
