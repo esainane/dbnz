@@ -167,7 +167,7 @@ static struct dbnz_rval *process_rval(struct dbnz_compile_state *s, struct defer
     }
     struct dbnz_rval *val = malloc(sizeof(struct dbnz_rval));
     *val = (struct dbnz_rval) { .type = RVAL_INTEGER, .line_no = rval->line_no, .u = { .v = s->proglen - (s->stack_top + rval->u.v) }};
-    break;
+    return val;
   case RVAL_ADD:  /* Can only recurse and resolve parameters */
   case RVAL_SUB: {
     struct dbnz_rval *lret, *rret;
