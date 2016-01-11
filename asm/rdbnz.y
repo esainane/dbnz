@@ -24,8 +24,13 @@
     }
 %}
 
-%define api.pure full
-%param {void *scanner} {struct dbnz_macro **macrolist} {struct dbnz_statementlist *stmtlist}
+%define api.pure
+%lex-param {void *scanner}
+%lex-param {struct dbnz_macro **macrolist}
+%lex-param {struct dbnz_statementlist *stmtlist}
+%parse-param {void *scanner}
+%parse-param {struct dbnz_macro **macrolist}
+%parse-param {struct dbnz_statementlist *stmtlist}
 
 %union {
     int i;
