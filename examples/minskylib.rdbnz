@@ -1,0 +1,27 @@
+
+/*
+ * Provides gadgets to show Turing reducibility via our compiler from a Minsky machine to dbnz.
+ * Turing reducibility from dbnz is shown by construction in our simulator.
+ *
+ * For reference, a Minsky machine has two instructions:
+ *  - Increment register
+ *  - Decrement register, unless it's zero, in which case, jump to another label
+ *
+ * The former is provided by inc() in our standard library.
+ * The latter, bnzdz, is defined here. It's very close to our dbnz instruction already.
+ */
+
+import stdlib
+
+def dnzbz(ptr, label)
+zero(@1)
+:checkzero
+dbnz @1,  ptrzero ; Decrement our zeroed @1 in lockstep with ptr. If @1 wraps back to zero first, ptr was also zero.
+dbnz ptr, nonzero ; Decrement our zeroed @1 in lockstep with ptr. If ptr wraps back to zero first, ptr was nonzero.
+jmp(checkzero)
+:ptrzero
+dbnz ptr, 3       ; Being the last step in restoring the original value of ptr, this should never fire - exit 1 if it does.
+jmp(label)
+:nonzero
+dec(ptr)
+dbnz @1,  nonzero ; Both ptr and @1 had been decremented MAX-@1 times. Keep going until @1 is zero again, when both have been decremented MAX times and wrapped back to their original value
