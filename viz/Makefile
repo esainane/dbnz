@@ -13,15 +13,16 @@ TARGET=inspect.exe
 endif
 
 CC?=gcc
-CFLAGS:=$(LFLAGS) -g -O2 -fno-strict-aliasing
-LFLAGS:=$(LFLAGS) -I../sim -L../sim -ldbnz
+CFLAGS:=$(CFLAGS) -g -O2 -fno-strict-aliasing
+override CFLAGS +=-I../sim
+LFLAGS:=$(LFLAGS) -L../sim -ldbnz
 
 all: $(TARGET)
 $(TARGET): $(OBJS) $(SOURCES) $(HEADERS)
 	$(CC) $(CFLAGS) $(LFLAGS) $(OBJS) -o $(TARGET)
 
 %.o: %.c
-	$(CC) $(CFLAGS) $(LFLAGS) -MMD -MP -MT $@ -c $<
+	$(CC) $(CFLAGS) -MMD -MP -MT $@ -c $<
 
 # Presumption - if a .o is already built, there is a suitably up to date .d file with it.
 # Still may need to run make twice in some degenerate cases where you move headers around
