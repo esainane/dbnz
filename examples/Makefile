@@ -14,6 +14,8 @@ MEMORY=65536
 
 TARGET?=helloworld.dbnz
 
+all: $(TARGET)
+
 %.dbnz: %.rdbnz stdlib.rdbnz $(DBNZC)
 	$(DBNZC) $(MEMORY) $< $@
 
