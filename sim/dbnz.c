@@ -9,7 +9,8 @@
 #include <inttypes.h>
 
 static void dbnz_bounds_hcf(const char *what, unsigned int step, size_t cursor, size_t len) {
-  fprintf(stderr, "Invalid access (%s) at %" PRIuMAX  "; upper bound (exclusive) is %" PRIuMAX "\n", what, (uintmax_t) cursor, (uintmax_t) len);
+  fprintf(stderr, "Invalid access (%s) at %" PRIuMAX  ", step %u; upper bound (exclusive) is %" PRIuMAX "\n",
+          what, (uintmax_t) cursor, step, (uintmax_t) len);
   exit(1);
 }
 
@@ -54,11 +55,12 @@ int dbnz_file_bootstrap(const char *filename, void (*stepcallback)(const DBNZ_CE
     fscanf(f, "%*[^\n]*\n");
   }
   fprintf(stderr, "File goes beyond memory available to the environment, limit is %" PRIuMAX  ", aborting!\n", (uintmax_t) plen);
+  exit(1);
 }
 
 int dbnz_bootstrap(DBNZ_CELL_TYPE *state, size_t plen, size_t cursor, void (*stepcallback)(const DBNZ_CELL_TYPE *state, size_t plen, size_t cursor, unsigned int step)) {
   if (cursor & 1) {
-    fprintf(stderr, "Invalid starting position %" PRIuMAX  ", aborting!\n");
+    fprintf(stderr, "Invalid starting position %" PRIuMAX  ", aborting!\n", cursor);
     exit(1);
   }
   unsigned int step = 0;
@@ -74,7 +76,8 @@ int dbnz_bootstrap(DBNZ_CELL_TYPE *state, size_t plen, size_t cursor, void (*ste
       dbnz_bounds_hcf("Decrement target", step, cursor, plen);
     }
   #ifdef SILLY_VERBOSE
-    printf("Cursor address: %" PRIuMAX  " decrement target address: %" DBNZ_CELL_FMT " decrement target value: %" DBNZ_CELL_FMT " non-zero jump address: %" DBNZ_CELL_FMT "\n", (uintmax_t) cursor, target, state[target], state[cursor + 1]);
+    printf("Cursor address: %" PRIuMAX  " decrement target address: %" DBNZ_CELL_FMT " decrement target value: %" DBNZ_CELL_FMT " non-zero jump address: %" DBNZ_CELL_FMT "\n",
+           (uintmax_t) cursor, target, state[target], state[cursor + 1]);
   #endif
     --state[target];
     state[target] &= DBNZ_CELL_MASK;
