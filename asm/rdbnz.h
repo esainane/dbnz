@@ -2,6 +2,15 @@
 #ifndef RDBNZ_H
 #define RDBNZ_H
 
+#include <stdlib.h>
+
+/* The maximum line length we store for parse and compile error reporting */
+/* This has no effect on lexing+parsing itself, which is handled by flex+bison */
+#define LINEBUF_LEN 500
+
+/* Allow imports up to 20 deep */
+#define IMPORT_MAX 20
+
 struct dbnz_rval;
 struct dbnz_expr {
   struct dbnz_rval *lhs;
@@ -63,7 +72,8 @@ struct dbnz_rval {
     char *n;
     struct dbnz_rval *r;
   } u;
-  int line_no;
+  size_t line_no;
+  unsigned file_no;
   struct dbnz_rval *next;
 };
 
@@ -88,7 +98,8 @@ struct dbnz_statement {
     struct dbnz_call_data c;
     struct dbnz_dbnz_data d;
   } u;
-  int line_no;
+  size_t line_no;
+  unsigned file_no;
   struct dbnz_statement *next;
 };
 
@@ -108,5 +119,48 @@ struct dbnz_macro {
   struct dbnz_statementlist statements;
   struct dbnz_macro *next;
 };
+
+struct dbnz_source {
+  char *name;
+  unsigned source_line_num;
+  unsigned source_line_max;
+  char **source_lines;
+};
+
+struct dbnz_parse_state {
+  char *linebuf;
+  int source_file_num;
+  int source_file_max;
+  struct dbnz_source *source_files;
+  unsigned import_depth;
+  unsigned imports[IMPORT_MAX];
+};
+
+struct locals;
+struct dbnz_compile_state {
+  /* Number of cells available to the VM. */
+  size_t proglen;
+  /* List of constants. */
+  size_t constant_num;
+  size_t constant_max;
+  size_t *constants;
+  /* List of executable cells.*/
+  size_t exec_num;
+  size_t exec_max;
+  struct dbnz_rval **execs;
+  /* List of all contexts we are currently inside of. */
+  size_t visited_num;
+  size_t visited_max;
+  const char **visited;
+  /* Length of registers used by enclosing contexts. */
+  size_t stack_top;
+  /* Length of registers used by the current context. */
+  size_t reg_num;
+  /* Locals from the top level context - a list of labels. */
+  struct locals *globals;
+  /* Name of the innermost context currently being processed. */
+  const char *context;
+};
+
 
 #endif /* RDBNZ_H */
