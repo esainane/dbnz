@@ -11,6 +11,8 @@
 /* Allow imports up to 20 deep */
 #define IMPORT_MAX 20
 
+#define QUAL_DESTRUCTIVE 1
+
 struct dbnz_rval;
 struct dbnz_expr {
   struct dbnz_rval *lhs;
@@ -72,6 +74,7 @@ struct dbnz_rval {
     char *n;
     struct dbnz_rval *r;
   } u;
+  int quals;
   size_t line_no;
   unsigned file_no;
   struct dbnz_rval *next;
@@ -110,6 +113,7 @@ struct dbnz_statementlist {
 
 struct dbnz_param {
   char *id;
+  int quals;
   struct dbnz_param *next;
 };
 

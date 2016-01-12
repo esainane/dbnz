@@ -44,7 +44,7 @@
 
 /* Tokens */
 
-%token DEF THIS DBNZ DATA BLANKLINE IMPORT
+%token DEF THIS DBNZ DATA BLANKLINE IMPORT DESTRUCTIVE
 %token <s> LABEL IDENTIFIER
 %token <i> INTEGER CONSTANT STACK
 %left '+' '-'
@@ -59,6 +59,7 @@
 %type <stmt> statementlisttail
 %type <macro> macro
 %type <macro> macrolist
+%type <i> quals
 
 /* Debugging */
 
@@ -97,12 +98,12 @@ macro:
         ;
 
 paramlist:
-        IDENTIFIER paramlisttail              { $$ = malloc(sizeof(struct dbnz_param)); $$->id = $1; $$->next = $2; }
+        IDENTIFIER quals paramlisttail        { $$ = malloc(sizeof(struct dbnz_param)); $$->id = $1; $$->quals = $2; $$->next = $3; }
         | /* NULL */                          { $$ = 0; }
         ;
 
 paramlisttail:
-        ',' IDENTIFIER paramlisttail          { $$ = malloc(sizeof(struct dbnz_param)); $$->id = $2; $$->next = $3; }
+        ',' IDENTIFIER quals paramlisttail    { $$ = malloc(sizeof(struct dbnz_param)); $$->id = $2; $$->quals = $3; $$->next = $4; }
         | /* NULL */                          { $$ = 0; }
         ;
 
@@ -122,12 +123,12 @@ statement:
         ;
 
 rvallist:
-        rval rvallisttail                     { $$ = $1; $$->next = $2; }
+        rval quals rvallisttail               { $$ = $1; $$->quals = $2; $$->next = $3; }
         | /* NULL */                          { $$ = 0; }
         ;
 
 rvallisttail:
-        ',' rval rvallisttail                 { $$ = $2; $$->next = $3; }
+        ',' rval quals rvallisttail           { $$ = $2; $$->quals = $3; $$->next = $4; }
         | /* NULL */                          { $$ = 0; }
         ;
 
@@ -140,6 +141,11 @@ rval:
         | IDENTIFIER                          { $$ = malloc(sizeof(struct dbnz_rval)); $$->line_no = yyget_lineno(scanner); $$->file_no = current_file_id(scanner); $$->type = RVAL_IDENTIFIER; $$->u.n = $1; } /* We don't know this due to initialization order, handle in 2nd pass */
         | rval '+' rval                       { $$ = malloc(sizeof(struct dbnz_rval)); $$->line_no = yyget_lineno(scanner); $$->file_no = current_file_id(scanner); $$->type = RVAL_ADD; $$->u.p = (struct dbnz_expr) { .lhs = $1, .rhs = $3 }; }
         | rval '-' rval                       { $$ = malloc(sizeof(struct dbnz_rval)); $$->line_no = yyget_lineno(scanner); $$->file_no = current_file_id(scanner); $$->type = RVAL_SUB; $$->u.p = (struct dbnz_expr) { .lhs = $1, .rhs = $3 }; }
+        ;
+
+quals:
+        DESTRUCTIVE                           { $$ = QUAL_DESTRUCTIVE; }
+        | /* NULL */                          { $$ = 0; }
         ;
 
 chomp:

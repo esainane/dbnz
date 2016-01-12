@@ -133,7 +133,7 @@ int input_newline(yyscan_t scanner);
                 return IDENTIFIER;
             }
 
-!           ;   /* Ignore */
+!           return DESTRUCTIVE;
 
 .           {
                 lexerror("Unknown character");
