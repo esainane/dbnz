@@ -80,7 +80,9 @@ static struct dbnz_rval *process_rval(struct dbnz_compile_state *s, struct defer
       s->reg_num = rval->u.v;
     }
     struct dbnz_rval *val = malloc(sizeof(struct dbnz_rval));
-    *val = (struct dbnz_rval) { .type = RVAL_INTEGER, .line_no = rval->line_no, .file_no = rval->file_no, .u = { .v = s->proglen - (s->stack_top + rval->u.v) }};
+    *val = *rval;
+    val->type = RVAL_INTEGER;
+    val->u.v = s->proglen - (s->stack_top + rval->u.v);
     return val;
   case RVAL_ADD:  /* Can only recurse and resolve parameters */
   case RVAL_SUB: {
@@ -108,10 +110,9 @@ static struct dbnz_rval *process_rval(struct dbnz_compile_state *s, struct defer
     /* We should never see an RVAL_IDENTCOPY outside of deferred resolution during statement list finalisation, and final program writing through the RVAL_REF indirection. */
     /* An ident RVAL_REF may be copied around freely, but should always point directly to the authorative RVAL_IDENTCOPY. */
     struct dbnz_rval *ref = malloc(sizeof(struct dbnz_rval));
+    *ref = *cpy;
     ref->type = RVAL_REF;
     ref->u.r = cpy;
-    ref->file_no = cpy->file_no;
-    ref->line_no = cpy->line_no;
     /* We'll later modify this copy, resolving it based on local context. */
     deferred->idents[deferred->num++] = cpy;
     return ref;
