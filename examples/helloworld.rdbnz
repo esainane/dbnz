@@ -18,4 +18,4 @@ add(&100, data + 13!)        ; A bit extra, just for fun
 sub( &58, data + 13!)        ; 42
                              ; The answer to life, the universe, and everything
 dup(data + 13, data + 14!)   ; Everyone deserves a second chance
-halt(&0!)
+halt(&0)

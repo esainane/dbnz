@@ -7,10 +7,10 @@ dbnz ptr, this + 1           ; Simple decrement and move to next instruction.
 
 def inc(ptr!)
 ; Increments ptr by one, and moves to the next instruction.
-zero(@1)
-dec(@1)
+zero(@1!)
+dec(@1!)
 :zerotmp                     ; @1 is already decremented once; we decrement ptr MAX-1 times.
-dec(ptr)
+dec(ptr!)
 dbnz @1, zerotmp             ; Zero out our temporary instruction until we've wrapped and incremented our original instruction.
 
 def jmp(label)
@@ -24,38 +24,39 @@ dbnz @1, label               ; Try to jump to the label, using our temporary val
 dbnz @1, this - 3            ; If we've fallen through, we know we'll jump to our label now, as we can't decrement to zero twice in a row.
 
 
-def halt(status!)
+def halt(status)
 ; Causes the interpreter to exit with the specified status code, by jumping to a specially interpreted unaligned address.
-add(status, @1)
-add(@1, status)
-inc(status)
-jmp(status)
+zero(@1!)
+add(status, @1!)
+add(status, @1!)
+inc(@1!)
+jmp(@1)
 
 def add(ptr, tgt!)
 ; Adds the value at `ptr` to `tgt`.
-zero(@1)
+zero(@1!)
 :zeroptr
-dec(@1)
+dec(@1!)
 dbnz ptr, zeroptr            ; zero out ptr, adding MAX - ptr to @1
                              ;
 :zerotmp
-dec(ptr)
-dec(tgt)
+dec(ptr!)
+dec(tgt!)
 dbnz @1, zerotmp             ; zero out @1, adding MAX - @1 (ie. the original value of ptr) back to ptr and adding to tgt
 
 def dup(ptr, tgt!)
 ; Duplicates the value at ptr to tgt
-zero(tgt)
-add(ptr, tgt)
+zero(tgt!)
+add(ptr, tgt!)
 
 def sub(ptr, tgt!)
 ; Subtracts the value at ptr from tgt
-zero(@1)
+zero(@1!)
 :zeroptr
-dec(tgt)
-dec(@1)
+dec(tgt!)
+dec(@1!)
 dbnz ptr, zeroptr            ; zero out ptr, adding MAX - ptr to @1
                              ;
 :zerotmp
-dec(ptr)
+dec(ptr!)
 dbnz @1, zerotmp             ; Start decrementing the wrapped value at ptr until its original value is restored
