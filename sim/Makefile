@@ -18,7 +18,8 @@ LIB_NAME=dbnz
 LIB_TARGET=$(LIBPREFIX)$(LIB_NAME).$(SOSUFFIX)
 
 CC?=gcc
-CFLAGS:=$(CFLAGS) -g -O2 -fno-strict-aliasing -fPIC
+CFLAGS+= -g -O2
+override CFLAGS += -fno-strict-aliasing -fPIC
 
 $(LIB_TARGET): $(OBJS) $(SOURCES) $(HEADERS)
 	$(CC) $(CFLAGS) $(LFLAGS) $(OBJS) -Wl,-soname,$(LIB_TARGET) -shared -o $(LIB_TARGET)

@@ -15,7 +15,8 @@ endif
 BISON?=bison
 FLEX?=flex
 CC?=gcc
-CFLAGS:=$(CFLAGS) -g -O2 -fno-strict-aliasing -fstack-protector-all
+CFLAGS:=$(CFLAGS) -g -O2 -fstack-protector-all
+override CFLAGS+= -fno-strict-aliasing
 BISONFLAGS:=$(BISONFLAGS) -y -d
 
 # There isn't much we can do about generated sources. It might be useful to periodically override this to be sure nothing is caused by something we added, but too much warning blindness inducing noise for the default.

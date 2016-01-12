@@ -13,8 +13,8 @@ TARGET=inspect.exe
 endif
 
 CC?=gcc
-CFLAGS:=$(CFLAGS) -g -O2 -fno-strict-aliasing
-override CFLAGS +=-I../sim
+CFLAGS:=$(CFLAGS) -g -O2
+override CFLAGS += -fno-strict-aliasing -I../sim
 LFLAGS:=$(LFLAGS) -L../sim -ldbnz
 
 all: $(TARGET)
