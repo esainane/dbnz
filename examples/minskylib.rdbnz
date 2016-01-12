@@ -13,15 +13,15 @@
 
 import stdlib
 
-def dnzbz(ptr, label)
+def dnzbz(ptr!, label)
 zero(@1)
 :checkzero
-dbnz @1,  ptrzero ; Decrement our zeroed @1 in lockstep with ptr. If @1 wraps back to zero first, ptr was also zero.
-dbnz ptr, nonzero ; Decrement our zeroed @1 in lockstep with ptr. If ptr wraps back to zero first, ptr was nonzero.
+dbnz @1,  ptrzero            ; Decrement our zeroed @1 in lockstep with ptr. If @1 wraps back to zero first, ptr was also zero.
+dbnz ptr, nonzero            ; Decrement our zeroed @1 in lockstep with ptr. If ptr wraps back to zero first, ptr was nonzero.
 jmp(checkzero)
 :ptrzero
-dbnz ptr, 3       ; Being the last step in restoring the original value of ptr, this should never fire - exit 1 if it does.
+dbnz ptr, 3                  ; Being the last step in restoring the original value of ptr, this should never fire - exit 1 if it does.
 jmp(label)
 :nonzero
 dec(ptr)
-dbnz @1,  nonzero ; Both ptr and @1 had been decremented MAX-@1 times. Keep going until @1 is zero again, when both have been decremented MAX times and wrapped back to their original value
+dbnz @1,  nonzero            ; Both ptr and @1 had been decremented MAX-@1 times. Keep going until @1 is zero again, when both have been decremented MAX times and wrapped back to their original value
