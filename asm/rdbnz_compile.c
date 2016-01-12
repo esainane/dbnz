@@ -133,6 +133,9 @@ static struct dbnz_rval *process_rval(struct dbnz_compile_state *s, struct defer
   }
 }
 
+/**
+ * Process arguments made in a macro call
+ */
 static void add_locals(struct dbnz_compile_state *s, struct dbnz_param *param, struct dbnz_rval *args, struct locals *locals, struct deferred *deferred, const char *target_id, const char *context) {
   memset(locals, '\0', sizeof(struct locals));
   for (; param && args; param = param->next, args = args->next) {
@@ -140,6 +143,10 @@ static void add_locals(struct dbnz_compile_state *s, struct dbnz_param *param, s
       locals->max += 50;
       locals->keys = realloc(locals->keys, sizeof(char *) * locals->max);
       locals->vals = realloc(locals->vals, sizeof(struct dbnz_rval *) * locals->max);
+    }
+    /* Bidirectional for now, may be relaxed later. Non-fatal for now, may be tightened later. */
+    if ((param->quals & QUAL_DESTRUCTIVE) != (args->quals & QUAL_DESTRUCTIVE)) {
+      fprintf(stderr, "Warning, mismatched qualifier parameter '%s' for macro '%s', called from %s!\n", param->id, target_id, context);
     }
     locals->keys[locals->num] = param->id;
     locals->vals[locals->num] = process_rval(s, deferred, args);
