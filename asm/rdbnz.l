@@ -133,9 +133,11 @@ int input_newline(yyscan_t scanner);
                 return IDENTIFIER;
             }
 
+!           ;   /* Ignore */
+
 .           {
-              lexerror("Unknown character");
-              yyterminate();
+                lexerror("Unknown character");
+                yyterminate();
             }
 
 %%
